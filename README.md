@@ -48,7 +48,7 @@ DC Level: Tiếp tục tổng hợp dữ liệu từ Store lên cấp độ Trun
 
 Output: Tự động xuất ra các file cấu trúc chuẩn (file_km_store_level, file_km_dc_level) sẵn sàng để đưa vào train model.
 
-🛠 Kỹ năng & Công cụ áp dụng (Skills & Technologies)
-Kỹ năng: Data Cleaning, Feature Engineering, Data Aggregation, Xử lý Logic Nghiệp vụ Bán lẻ (Retail Business Logic).
+#### 🛠 Kỹ năng & Công cụ áp dụng (Skills & Technologies)
+Kỹ năng: Data Cleaning, Feature Engineering, Data Aggregation, Xử lý Logic Nghiệp vụ Bán lẻ (Retail Business Logic), pyspark.
 
 Công cụ/Thư viện (Dự kiến): Python (Pandas, Numpy cho Data Manipulation), ETL process, Data Analytics.
