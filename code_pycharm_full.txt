@@ -1,0 +1,410 @@
+df_Promotion.giftproductprice = df_Promotion.giftproductprice.astype(float)
+
+------------------------
+
+DistinctCounts = (
+    df_Promotion.groupby('promotionid')
+    .agg(
+        promotion_count=('productidmain', 'nunique'),
+        avg_giftproductprice=('giftproductprice', 'mean'),
+        avg_newsaleprice=('newsaleprice', 'mean'),
+        promotiongift_count=('giftproductid', 'nunique')
+    )
+    .reset_index()
+)
+
+-------------------------
+
+PromotionWithAgg = df_Promotion.merge(
+    DistinctCounts,
+    on='promotionid',
+    how='inner'
+)
+
+--------------------------
+
+SELECT
+    *,
+    CASE
+        WHEN promotiontype = 8 AND promotiongifttype = 4 THEN
+            CASE
+                WHEN promotiongift_count = 1 THEN
+                    CASE
+                        WHEN totalorderpromotiontype = 4 THEN
+                            CASE
+                                WHEN giftproductid = productidmain THEN
+                                    CASE
+                                        WHEN totalquantitydonate4 IS NOT NULL THEN totalquantitydonate4 / 100
+                                        WHEN totalquantitydonate2 IS NOT NULL THEN
+                                            (giftproductprice * giftproductquantity) /
+                                            (newsaleprice * (mintotalmoneyquantity + giftproductquantity))
+                                    END
+                                WHEN giftproductid != productidmain THEN
+                                    (giftproductprice * giftproductquantity) /
+                                    ((newsaleprice * mintotalmoneyquantity) + (giftproductprice * giftproductquantity))
+                                ELSE NULL
+                            END
+                        WHEN totalorderpromotiontype = 2 THEN
+                            CASE
+                                WHEN totalquantitydonate4 IS NOT NULL THEN totalquantitydonate4 / 100
+                                WHEN totalquantitydonate2 IS NOT NULL THEN
+                                    (giftproductprice * giftproductquantity) /
+                                    (mintotalmoneyquantity + (giftproductprice * giftproductquantity))
+                                ELSE NULL
+                            END
+                        ELSE NULL
+                    END
+                WHEN promotiongift_count > 1 OR promotion_count > 1 THEN
+                    CASE
+                        WHEN totalorderpromotiontype = 4 THEN
+                            CASE
+                                WHEN totalquantitydonate4 IS NOT NULL THEN totalquantitydonate4 / 100
+                                WHEN totalquantitydonate2 IS NOT NULL THEN
+                                    (avg_giftproductprice * giftproductquantity) /
+                                    ((avg_newsaleprice * mintotalmoneyquantity) + (avg_giftproductprice * giftproductquantity))
+                                ELSE NULL
+                            END
+                        WHEN totalorderpromotiontype = 2 THEN
+                            CASE
+                                WHEN totalquantitydonate4 IS NOT NULL THEN totalquantitydonate4 / 100
+                                WHEN totalquantitydonate2 IS NOT NULL THEN
+                                    (avg_giftproductprice * giftproductquantity) /
+                                    (mintotalmoneyquantity + (giftproductprice * giftproductquantity))
+                                ELSE NULL
+                            END
+                        ELSE NULL
+                    END
+                ELSE NULL
+            END
+        ELSE NULL
+    END AS promotionbenefit_gift
+FROM
+    PromotionWithAgg;
+	
+------------------------
+
+SELECT
+    *,
+    CASE
+        WHEN (promotiontype = 4 AND promotiongifttype = 4 AND giftproductid = productidmain) THEN
+            (giftproductprice*giftproductquantity)/ (newsaleprice*(mintotalmoney+giftproductquantity))
+		WHEN (promotiontype = 4 AND promotiongifttype = 4 AND giftproductid != productidmain) THEN
+			(giftproductprice*giftproductquantity)/ (newsaleprice*mintotalmoney + giftproductprice*giftproductquantity)
+			
+        WHEN (promotiontype = 4 AND promotiongifttype = 3 AND discounttype = 2) THEN
+            discountvalue / (newsaleprice * mintotalmoney)
+        WHEN (promotiontype = 4 AND promotiongifttype = 3 AND discounttype = 1) THEN
+            discountvalue / 100
+        WHEN (promotiontype = 4 AND promotiongifttype IS NULL AND discounttype = 2) THEN
+            discountvalue / (newsaleprice * mintotalmoney)
+			
+		WHEN (promotiontype = 4 AND promotiongifttype = 5 AND discountpercent != 0) THEN
+			discountpercent /100
+		WHEN (promotiontype = 4 AND promotiongifttype = 5 AND discountpercent = 0) THEN	
+			promotionprice / (newsaleprice*mintotalmoney)
+			
+        WHEN (promotiontype = 1 AND promotiongifttype = 3 AND discounttype = 2) THEN
+            discountvalue / (mainproductquantity * newsaleprice)
+        WHEN (promotiontype = 1 AND promotiongifttype = 3 AND discounttype = 1) THEN
+            discountvalue / 100
+        WHEN (promotiontype = 1 AND promotiongifttype = 4 AND giftproductprice IS NULL) THEN
+            discountvalue / 100
+        WHEN (promotiontype = 1 AND promotiongifttype = 4 AND giftproductprice IS NOT NULL AND giftproductid = productidmain) THEN
+            (giftproductprice * giftproductquantity) / (newsaleprice * (mainproductquantity + giftproductquantity))
+        WHEN (promotiontype = 1 AND promotiongifttype = 4 AND giftproductprice IS NOT NULL AND giftproductid != productidmain) THEN
+            (giftproductprice * giftproductquantity) / (newsaleprice * mainproductquantity + giftproductprice * giftproductquantity)
+        WHEN (promotiontype = 1 AND promotiongifttype = 5 AND discountpercent != 0) THEN
+            discountpercent / 100
+        WHEN (promotiontype = 1 AND promotiongifttype = 5 AND discountpercent = 0) THEN
+            promotionprice / (newsaleprice * mainproductquantity)
+			
+		WHEN promotiontype = 8 AND promotiongifttype = 3 AND discounttype = 1 THEN 
+		    discountvalue / 100
+		WHEN promotiontype = 8 AND promotiongifttype = 3 AND discounttype = 3 AND newsaleprice IS NOT NULL THEN 
+		    (newsaleprice - discountvalue)/ newsaleprice
+			
+		WHEN promotiontype = 8 AND promotiongifttype = 3 AND discounttype = 2 AND totalorderpromotiontype = 2 AND promotion_count = 1 
+            THEN discountvalue / 
+                CASE 
+                    WHEN mintotalmoneyquantity > newsaleprice THEN mintotalmoneyquantity
+                    ELSE newsaleprice
+                END
+		WHEN promotiontype = 8 AND promotiongifttype = 3 AND discounttype = 2 AND totalorderpromotiontype = 2 AND promotion_count > 1 
+            THEN discountvalue / mintotalmoneyquantity	
+			
+		WHEN promotiontype = 8 AND promotiongifttype = 3 AND discounttype = 2 AND totalorderpromotiontype = 4
+			THEN discountvalue / 
+                CASE 
+                    WHEN mintotalmoneyquantity < 1 THEN newsaleprice
+                    ELSE newsaleprice * mintotalmoneyquantity
+                END
+			
+		WHEN promotiontype = 8 AND promotiongifttype = 6 AND discounttype = 2 AND totalorderpromotiontype = 4 THEN 
+		    discountvalue / (newsaleprice * mintotalmoneyquantity)
+		WHEN promotiontype = 8 AND promotiongifttype = 6 AND discounttype = 2 AND totalorderpromotiontype = 2 THEN 
+		    discountvalue / mintotalmoneyquantity
+		WHEN promotiontype = 8 AND promotiongifttype = 6 AND discounttype = 1 THEN 
+		    discountvalue / 100
+		WHEN promotiontype = 8 AND promotiongifttype = 4 THEN
+        CASE
+            WHEN discounttype = 2 AND totalorderpromotiontype = 4 THEN
+                ((discountvalue / (newsaleprice * mintotalmoneyquantity)) + promotionbenefit_gift) / 2
+            WHEN discounttype = 2 AND totalorderpromotiontype = 2 THEN
+                ((discountvalue / mintotalmoneyquantity) + promotionbenefit_gift) / 2
+            WHEN discounttype = 1 THEN
+                ((discountvalue / 100) + promotionbenefit_gift) / 2
+            WHEN discounttype = 0 OR discounttype IS NULL THEN promotionbenefit_gift
+        END
+
+		WHEN promotiontype = 8 AND promotiongifttype = 5 AND giftproductid = productidmain AND promotionprice IS NULL AND discountpercent != 0  THEN
+		    (1 - discountpercent/100) / (minquantity + 1)
+		WHEN promotiontype = 8 AND promotiongifttype = 5 AND giftproductid = productidmain AND promotionprice IS NOT NULL AND discountpercent = 0 THEN
+		    (newsaleprice - promotionprice)/ (newsaleprice * (minquantity + 1))
+
+        ELSE
+            NULL
+    END AS promotionbenefit
+FROM
+    df_pre_PromotionBenefit;
+	
+-------------------------
+
+df_PromotionBenefit = df_PromotionBenefit.drop_duplicates()
+df_PromotionBenefit['giftproductid'] = df_PromotionBenefit['giftproductid'].fillna(value=0)
+
+---------------------------
+
+df_PromotionBenefit = df_PromotionBenefit[~((df_PromotionBenefit['giftproductid'] != 0) & (df_PromotionBenefit['promotionbenefit'] > 0.95))]
+df_PromotionBenefit = df_PromotionBenefit[(df_PromotionBenefit['promotionbenefit'] >= 0) & (df_PromotionBenefit['promotionbenefit'] < 2)]	
+df_PromotionBenefit = df_PromotionBenefit[~df_PromotionBenefit['promotionid'].isin(df_Promotion_blacklist['promotionid'])]
+
+----------------------------
+
+df_PromotionBenefit['minproductquantity'] = df_PromotionBenefit.apply(
+    lambda row: row['mainproductquantity'] if row['promotiontype'] == 1 else (
+                row['mintotalmoney'] if row['promotiontype'] == 4 else (
+                    row['mintotalmoneyquantity'] if row['promotiontype'] == 8 else None)
+                ),
+    axis=1
+)
+df_PromotionBenefit['minproductquantity'] = df_PromotionBenefit['minproductquantity'].apply(
+    lambda x: x if isinstance(x, (int, float)) and x < 500 else None
+)
+
+-----------------------------
+
+df_PromotionBenefit['alpha'] = df_PromotionBenefit.apply(lambda row: 1 / (0.5*row['promotion_count']) if row['promotion_count'] > 1 else 1, axis=1)
+
+-----------------------------
+
+df_PromotionBenefit["b4alpha_promotionbenefit"]= df_PromotionBenefit["promotionbenefit"]
+
+-----------------------------
+
+df_PromotionBenefit['promotionbenefit'] = df_PromotionBenefit['alpha']*df_PromotionBenefit['promotionbenefit']
+
+------------------------------
+
+len(df_PromotionBenefit)>0
+
+------------------------------
+
+df_PromotionBenefit['is_giftproductprice_null'] = df_PromotionBenefit.apply(lambda row: 1 if (row['promotiongifttype'] == 4 and pd.isnull(row['promotionbenefit']))  and ((row['giftproductprice'] or -1) < 500 or pd.isnull(row['giftproductprice'])) else 0, axis=1)
+df_PromotionBenefit['is_promotionbenefit_null'] = df_PromotionBenefit['promotionbenefit'].apply(lambda x: 1 if pd.isnull(x) else 0)
+df_check_isnull = df_PromotionBenefit
+
+-------------------------------
+
+SELECT
+    promotionid,
+    promotionname,
+    promotiontype,
+    fromdate,
+    todate,
+    mintotalmoney,
+    promotiongifttype,
+    discounttype,
+    discountvalue,
+    giftproductid,
+    giftproductquantity,
+    promotionprice,
+    giftproductprice,
+    productidmain,
+    mainproductquantity,
+    newsaleprice,
+    promostoretype,
+    iscontinuouspromotion,
+    oldpromotionid,
+    isnosellingpower,
+    discountpercent,
+    itemid,
+    exchangequantity,
+    promotionbenefit,
+    group_concat(storeid) over (PARTITION by promotionid, productidmain, giftproductid) storeidlist,
+    is_giftproductprice_null,
+    is_promotionbenefit_null
+FROM df_check_isnull
+
+-------------------------------
+
+df_PromotionBenefit_pre = df_PromotionBenefit_pre.drop_duplicates(subset=['promotionid', 'productidmain', 'giftproductid'], keep='first')
+
+-------------------------------
+
+df_PromotionBenefit_avg = df_check_isnull[['itemid','productidmain','fromdate', 'todate', 'promotionid','promotiontype','promotiongifttype','discounttype', 'storeid', 'exchangequantity','minproductquantity', 'promotionbenefit', 'is_giftproductprice_null', 'is_promotionbenefit_null' ]]
+if df_PromotionBenefit_avg.empty:
+    df_PromotionBenefit_avg
+else:
+    df_PromotionBenefit_avg.fillna(0, inplace=True)
+    group_columns = [col for col in df_PromotionBenefit_avg.columns if col not in ['promotionbenefit', 'is_giftproductprice_null', 'is_promotionbenefit_null']]
+    df_PromotionBenefit_avg = df_PromotionBenefit_avg.groupby(group_columns).agg({
+        'promotionbenefit': 'mean',
+        'is_giftproductprice_null': 'mean',
+		'is_promotionbenefit_null': 'mean'
+    }).reset_index()
+    df_PromotionBenefit_avg['is_giftproductprice_null'] = df_PromotionBenefit_avg['is_giftproductprice_null'].apply(lambda x: 1 if x > 0 else x)
+    df_PromotionBenefit_avg['is_promotionbenefit_null'] = df_PromotionBenefit_avg['is_promotionbenefit_null'].apply(lambda x: 1 if x > 0 else x)
+	
+--------------------------------
+
+def expand_date_range(df, fromdate_col='fromdate', todate_col='todate'):
+    if df.empty:
+        return pd.DataFrame(columns=df.columns.to_list() + ['date_key'])
+
+    df[fromdate_col] = pd.to_datetime(df[fromdate_col], errors='coerce')
+    df[todate_col] = pd.to_datetime(df[todate_col], errors='coerce')
+
+    df['adjusted_fromdate'] = df[fromdate_col].apply(
+        lambda x: x + pd.Timedelta(days=1) if x.hour >= 21 else x
+    ).dt.date
+
+    df['adjusted_todate'] = df[todate_col].apply(
+        lambda x: x - pd.Timedelta(days=1) if x.hour < 8 else x
+    ).dt.date
+
+    df = df.dropna(subset=['adjusted_fromdate', 'adjusted_todate'])
+
+    date_ranges = [pd.date_range(start=row['adjusted_fromdate'], end=row['adjusted_todate'], freq='D')
+                   for index, row in df.iterrows()]
+
+    expanded_df = df.loc[df.index.repeat([len(dr) for dr in date_ranges])].reset_index(drop=True)
+
+    expanded_df['date_key'] = [date for dr in date_ranges for date in dr]
+
+    return expanded_df
+
+if len(df_PromotionBenefit_avg) == 0:
+    df_PromotionBenefit_avg['date_key'] = pd.NaT 
+    expanded_df = df_PromotionBenefit_avg
+else:
+    expanded_df = expand_date_range(df_PromotionBenefit_avg)
+
+    expanded_df['date_key'] = expanded_df['date_key'].dt.strftime('%Y%m%d').astype(int)
+
+    min_dimdate = min(df_dimdate['date_key'])
+    max_dimdate = max(df_dimdate['date_key'])
+
+    expanded_df = expanded_df[(expanded_df['date_key'] >= min_dimdate) &
+                (expanded_df['date_key'] <= max_dimdate) &
+                (expanded_df['promotionbenefit'].notnull()) &
+                ~((expanded_df['promotiongifttype'] == 5) & (expanded_df['promotionbenefit'] > 0.95))]
+
+    expanded_df = expanded_df.drop(columns=['fromdate', 'todate', 'adjusted_fromdate', 'adjusted_todate'])
+	
+--------------------------
+
+expanded_df = expanded_df[
+    expanded_df.groupby(['productidmain','date_key','minproductquantity'])['discounttype']
+      .transform(lambda x: x.eq(3) if x.eq(3).any() 
+                                else pd.Series(True, index=x.index))
+]
+
+---------------------------
+
+expanded_df = expanded_df.sort_values(['date_key', 'productidmain', 'itemid', 'storeid', 'exchangequantity'])
+
+mask = expanded_df['discounttype'] == 3
+
+expanded_df['cumulative_promotionbenefit'] = expanded_df['promotionbenefit']
+
+expanded_df.loc[~mask, 'cumulative_promotionbenefit'] = (
+    expanded_df.loc[~mask]
+    .groupby(['date_key', 'productidmain', 'itemid', 'storeid', 'exchangequantity'])['promotionbenefit']
+    .cumsum()
+)
+del mask
+
+df_grouped = expanded_df.groupby(
+    ['date_key', 'productidmain', 'itemid', 'storeid', 'exchangequantity','minproductquantity']
+).agg(
+    promotionbenefit=('cumulative_promotionbenefit', 'max'),
+    maxpromotionbenefit=('promotionbenefit', 'max'),
+    maxexchangequantity=('exchangequantity', 'max'),
+    countexchangequantity=('itemid', 'size'),
+    countpromoeachproduct=('productidmain', 'size'),
+    is_giftproductprice_null=('is_giftproductprice_null', 'max'),
+    is_promotionbenefit_null=('is_promotionbenefit_null', 'max')
+).reset_index()
+
+df_sum_promotionbenefit = df_grouped[
+    ~(
+        (df_grouped['countexchangequantity'] > 1) &
+        (df_grouped['exchangequantity'] == df_grouped['maxexchangequantity']) &
+        (df_grouped['promotionbenefit'] != df_grouped['maxpromotionbenefit']) &
+        ~(df_grouped['countpromoeachproduct'] > 1)
+    )
+].groupby(['date_key', 'itemid', 'storeid']).agg(
+    promotionbenefit=('promotionbenefit', 'mean'),
+    max_promotionbenefit = ('promotionbenefit', 'max'),
+    min_promotionbenefit = ('promotionbenefit', 'min'),
+    is_giftproductprice_null=('is_giftproductprice_null', 'max'),
+    is_promotionbenefit_null=('is_promotionbenefit_null', 'max')
+).reset_index()
+del df_grouped
+
+---------------------------
+
+SELECT
+  dcid,
+  tmp2.itemid, 
+  fc_promotion_benefit.date_key, 
+  countstore, 
+  avg(fc_promotion_benefit.promotionbenefit) promotionbenefit,
+  MAX(promotionbenefit) as max_promotionbenefit,
+  MIN(promotionbenefit) as min_promotionbenefit,
+  count(1) countpromoapplystore, 
+  MAX(is_giftproductprice_null) AS is_giftproductprice_null,
+  MAX(is_promotionbenefit_null) AS is_promotionbenefit_null
+from df_sum_promotionbenefit fc_promotion_benefit
+  join (
+    Select 
+      dcid, 
+      storeid, 
+      itemid, 
+      count(1) over (PARTITION by dcid, itemid) countstore 
+    from 
+      df_dcStoreItem
+  ) tmp2 
+    on fc_promotion_benefit.storeid = tmp2.storeid 
+    and fc_promotion_benefit.itemid = tmp2.itemid 
+group by 
+  dcid, 
+  tmp2.itemid,
+  fc_promotion_benefit.date_key, 
+  countstore
+  
+-------------------------------
+
+del df_dc_promotionbenefit['is_giftproductprice_null']
+
+-------------------------------
+
+df_dc_promotionbenefit["initial_promotionbenefit"]= df_dc_promotionbenefit["promotionbenefit"]
+
+-------------------------------
+
+import numpy as np
+df_dc_promotionbenefit['promotionbenefit'] = np.where(df_dc_promotionbenefit['initial_promotionbenefit'] <1 , df_dc_promotionbenefit['initial_promotionbenefit'], 1)
+
+-------------------------------
+
