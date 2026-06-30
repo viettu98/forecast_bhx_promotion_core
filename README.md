@@ -41,12 +41,25 @@ Cộng dồn khuyến mãi: Tính toán Actual_benefit (sử dụng rank, cumsum
 
 Kiểm soát tính hợp lý: Nhận dạng và xử lý các case bất thường như "mua số lượng nhiều nhưng % giảm lại ít hơn mua số lượng ít" (so sánh Min_benefit và Actual_benefit).
 
+Hướng xử lý đã brandstorm từ giai đoạn đầu:
+[EXCEL_ZQOvewJHLx.png](https://github.com/viettu98/forecast_bhx_promotion_core/blob/main/EXCEL_ZQOvewJHLx.png)
+
 4. Tổng hợp & Xuất dữ liệu (Data Aggregation & Output)
 Store Level: Tính toán % giảm giá trung bình (dựa trên Max và Min discount) cho từng itemid tại từng storeid theo chuỗi thời gian (datekey).
 
 DC Level: Tiếp tục tổng hợp dữ liệu từ Store lên cấp độ Trung tâm phân phối (DC), tính toán % giảm DC và tỷ lệ siêu thị có áp dụng KM (% áp dụng DC).
 
 Output: Tự động xuất ra các file cấu trúc chuẩn (file_km_store_level, file_km_dc_level) sẵn sàng để đưa vào train model.
+
+5. Các kết quả đo lường FC từ khi áp dụng KM:
+
+https://github.com/viettu98/forecast_bhx_promotion_core/blob/main/EXCEL_WLA05FsiRs.png
+
+https://github.com/viettu98/forecast_bhx_promotion_core/blob/main/EXCEL_VO8GLwHRQY.png
+
+https://github.com/viettu98/forecast_bhx_promotion_core/blob/main/EXCEL_QdDlioXFQb.png
+
+https://github.com/viettu98/forecast_bhx_promotion_core/blob/main/EXCEL_2ItheMryFU.png
 
 #### 🛠 Kỹ năng & Công cụ áp dụng (Skills & Technologies)
 Kỹ năng: Data Cleaning, Feature Engineering, Data Aggregation, Xử lý Logic Nghiệp vụ Bán lẻ (Retail Business Logic), pyspark.
